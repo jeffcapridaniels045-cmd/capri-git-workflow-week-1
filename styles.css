@@ -1,0 +1,76 @@
+/* ---------- Vanilla CSS: green theme, motion, overrides ---------- */
+:root {
+  --g-950: #022c22; --g-900: #064e3b; --g-700: #047857;
+  --g-500: #10b981; --g-300: #6ee7b7; --g-50: #ecfdf5;
+}
+html { scroll-behavior: smooth; }
+body { font-family: "Inter", system-ui, sans-serif; background: var(--g-50); color: #0f172a; overflow-x: hidden; }
+.font-display { font-family: "Fraunces", Georgia, serif; }
+section[id] { scroll-margin-top: 64px; }
+
+/* scroll progress bar (driven by script.js) */
+#progress { position: fixed; top: 0; left: 0; height: 3px; width: 0; z-index: 70;
+  background: linear-gradient(90deg, #6ee7b7, #10b981, #84cc16); }
+
+/* header turns solid once you scroll (body.scrolled set by script.js) */
+.site-header { transition: all .5s; background: transparent; border-bottom: 1px solid transparent; color: #fff; }
+body.scrolled .site-header { background: rgba(255,255,255,.95); backdrop-filter: blur(14px);
+  border-bottom-color: #d1fae5; box-shadow: 0 2px 12px rgba(2,44,34,.08); color: var(--g-950); }
+.nav-link-x { position: relative; font-weight: 600; padding: 4px 0; background: none; border: 0; color: inherit; }
+.nav-link-x::after { content: ""; position: absolute; left: 0; bottom: -4px; height: 2px; width: 100%;
+  background: currentColor; transform: scaleX(0); transform-origin: left; transition: transform .3s; }
+.nav-link-x:hover::after { transform: scaleX(1); }
+
+/* keyframes */
+@keyframes float { 0%,100% { transform: translateY(0) } 50% { transform: translateY(-12px) } }
+@keyframes drift { 0%,100% { transform: translate(0,0) scale(1) } 50% { transform: translate(35px,-25px) scale(1.12) } }
+@keyframes gradx { to { background-position: 200% 50% } }
+@keyframes rise { from { opacity: 0; transform: translateY(18px) } to { opacity: 1; transform: none } }
+@keyframes spin { to { transform: rotate(360deg) } }
+@keyframes marquee { to { transform: translateX(-50%) } }
+@keyframes pulse-node { 0%,100% { r: 6; opacity: 1 } 50% { r: 10; opacity: .55 } }
+@keyframes sweep { 0% { transform: translateX(0) skewX(-20deg) } 60%,100% { transform: translateX(520%) skewX(-20deg) } }
+@keyframes blink { 50% { opacity: 0 } }
+
+.anim-float { animation: float 6s ease-in-out infinite; }
+.anim-drift { animation: drift 9s ease-in-out infinite; }
+.anim-drift-2 { animation: drift 12s ease-in-out 1s infinite reverse; }
+.anim-gradx { background-size: 200% auto; animation: gradx 5s linear infinite; }
+.anim-rise { opacity: 0; animation: rise .7s cubic-bezier(.22,1,.36,1) forwards; }
+.anim-marquee { animation: marquee 34s linear infinite; }
+.anim-marquee:hover { animation-play-state: paused; }
+.conic { background: conic-gradient(from 0deg, transparent 0 40deg, rgba(110,231,183,.95) 90deg, transparent 150deg, rgba(132,204,22,.9) 240deg, transparent 300deg);
+  animation: spin 7s linear infinite; }
+.sweep { animation: sweep 3.2s ease-in-out infinite; }
+.node { animation: pulse-node 2.4s ease-in-out infinite; }
+
+/* scroll reveal (class "in" added by script.js) */
+.reveal { opacity: 0; transform: translateY(28px); transition: opacity .8s, transform .8s cubic-bezier(.22,1,.36,1); }
+.reveal.in { opacity: 1; transform: none; }
+
+/* terminal */
+.term { font-family: ui-monospace, "SF Mono", Menlo, monospace; font-size: 14px; min-height: 250px; color: #d1fae5; }
+.term .tl { white-space: pre-wrap; margin-bottom: 4px; }
+.term .cmd::before { content: "$ "; color: #6ee7b7; }
+.term .out { color: #94a3b8; }
+.term .ok { color: #86efac; }
+.caret { display: inline-block; width: 8px; height: 15px; background: #6ee7b7; animation: blink 1s steps(1) infinite; vertical-align: middle; }
+
+/* hover lifts */
+.lift { transition: transform .4s, box-shadow .4s, border-color .4s; }
+.lift:hover { transform: translateY(-6px); box-shadow: 0 24px 60px -20px rgba(4,120,87,.35); border-color: #6ee7b7; }
+
+/* Bootstrap accordion re-skinned green */
+.accordion-item { border: 1px solid #d1fae5; border-radius: 1rem !important; overflow: hidden; margin-bottom: 14px; transition: box-shadow .3s, transform .3s; }
+.accordion-item:hover { transform: translateY(-2px); box-shadow: 0 12px 30px -12px rgba(4,120,87,.3); }
+.accordion-button { font-weight: 700; font-size: 1.05rem; padding: 1.2rem 1.5rem; }
+.accordion-button:not(.collapsed) { background: linear-gradient(90deg, #d1fae5, #ecfdf5); color: var(--g-900); box-shadow: none; }
+.accordion-button:focus { box-shadow: 0 0 0 4px rgba(16,185,129,.2); border-color: var(--g-500); }
+
+:focus-visible { outline: 3px solid var(--g-500); outline-offset: 2px; }
+
+@media (prefers-reduced-motion: reduce) {
+  html { scroll-behavior: auto; }
+  *, *::before, *::after { animation: none !important; transition-duration: .01ms !important; }
+  .reveal, .anim-rise { opacity: 1; transform: none; }
+}

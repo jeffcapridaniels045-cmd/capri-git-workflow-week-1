@@ -1,0 +1,613 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Git Workflow · Week 1</title>
+
+  <!-- Bootstrap CSS (grid + accordion) -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.3/css/bootstrap.min.css" />
+  <!-- Fonts -->
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,600;0,9..144,700;1,9..144,600&family=Inter:wght@400;500;600;700;800&display=swap" />
+  <!-- Tailwind CSS (play CDN) -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Vanilla CSS -->
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <div id="progress"></div>
+  <div id="root"></div>
+
+  <!-- React + Babel (JSX compiled in the browser, no build step) -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.2/babel.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.3/js/bootstrap.bundle.min.js"></script>
+  <!-- Vanilla JS -->
+  <script src="script.js"></script>
+
+  <script type="text/babel">
+    const { useState, useEffect } = React;
+
+    const NAV = [["Introduction", "introduction"], ["Foundations", "foundations"], ["Workflow", "workflow"], ["Lab", "lab"], ["History", "history"], ["FAQs", "faqs"]];
+    const go = (id) => document.getElementById(id)?.scrollIntoView({ behavior: "smooth" });
+
+    const TERMINAL = [
+      ["cmd", "git init"],
+      ["out", "Initialized empty Git repository in week-1-lab/.git/"],
+      ["cmd", "git add README.md"],
+      ["cmd", 'git commit -m "Initial commit"'],
+      ["ok", "[main (root-commit) 3f9a1c2] Initial commit"],
+      ["cmd", "git push -u origin main"],
+      ["ok", "Branch 'main' set up to track 'origin/main'."],
+    ];
+
+    const CONCEPTS = [
+      { t: "Snapshots, not copies", d: "Every commit records what your project looked like at that moment, so you can return to any point.", i: "📸" },
+      { t: "Branches", d: "Try an idea on its own line of work. Merge it back when it works, or delete it when it does not.", i: "🌿" },
+      { t: "Distributed", d: "Every clone holds the full history. You can commit offline and share later.", i: "🌍" },
+    ];
+
+    const STAGES = [
+      { n: "Working directory", c: "git status", d: "Where you edit files. Git notices changes but is not saving them yet." },
+      { n: "Staging area", c: "git add .", d: "You pick which changes belong in the next snapshot." },
+      { n: "Local repository", c: 'git commit -m "Add login page"', d: "Git stores the snapshot with your message and name. It stays on your machine." },
+      { n: "Remote (GitHub)", c: "git push origin main", d: "Share your commits with the team. Use git pull to receive theirs." },
+    ];
+
+    const FOUND = [
+      { id: "programs", label: "How programs run", icon: "⚙️", lead: "Everything you write has to become machine code before a CPU can run it.",
+        points: [
+          ["Source becomes machine code", "A CPU only runs machine code. Compiled languages (C, Go, Rust) translate ahead of time. Interpreted ones are read as they run. Java, C# and Python compile to bytecode for a virtual machine."],
+          ["A process is a running program", "Starting a program creates a process with its own memory and a unique PID. Two terminals running bash are two separate processes."],
+          ["Stack and heap", "The stack holds local variables and cleans itself up, but it is small, so too much recursion overflows it. The heap holds memory a program asks for and must free, or it leaks."],
+          ["Files and permissions", "A path is absolute or relative to where you are. Each file has read, write and execute permissions for its owner, its group and everyone else."],
+        ],
+        tryIt: "echo 'int main() { return 42; }' > test.c\ngcc test.c -o test\n./test; echo $?" },
+      { id: "os", label: "Operating systems", icon: "🖥️", lead: "The operating system sits between your programs and the hardware.",
+        points: [
+          ["Four jobs", "It schedules processes, manages memory, runs the filesystem and the network stack, and uses drivers to talk to hardware."],
+          ["Kernel and user space", "Your program cannot touch the disk directly. It asks the kernel through a system call, and the kernel enforces the rules. That is why a buggy app cannot corrupt another process."],
+          ["The shell is just a program", "bash or PowerShell reads your command and asks the kernel to start a process for it. The same rules apply to it as to any program you write."],
+          ["Scheduling", "The scheduler gives each process a short time slice, then switches. It looks simultaneous, but one runaway process can still starve the others."],
+        ],
+        tryIt: "top\nps aux | head -5" },
+      { id: "net", label: "Networking", icon: "🌐", lead: "A web request is a stack of small, separate jobs.",
+        points: [
+          ["Four layers", "HTTP data rides on TCP or UDP, which rides on IP, which rides on Wi-Fi or Ethernet. Each layer only knows its own job."],
+          ["IP, ports and DNS", "An IP address finds the machine and a port finds the service on it: 443 is HTTPS, 80 is HTTP, 22 is SSH. DNS turns a name like api.github.com into an address before anything connects."],
+          ["TCP or UDP", "TCP does a three-way handshake first, then guarantees order and delivery. UDP skips the handshake and trades guarantees for speed, which suits calls and streaming."],
+          ["HTTP and status codes", "A request has a method, a path, headers and sometimes a body. 2xx means success, 3xx a redirect, 4xx a mistake in your request and 5xx a server failure."],
+        ],
+        tryIt: "curl -v https://api.github.com 2>&1 | head -30" },
+      { id: "cli", label: "Command line", icon: "⌨️", lead: "Agentic tools such as Claude Code run real shell commands. If you cannot read terminal output, you cannot supervise them.",
+        points: [
+          ["Move and look around", "pwd shows where you are, ls -la lists files including hidden ones, and cd moves between folders."],
+          ["Read and search", "cat prints a file, less pages through it, tail -f follows a live log, grep -r finds text and find locates files by name."],
+          ["Create, move, delete", "touch, mkdir -p, cp -r and mv build things up. rm deletes for good: there is no undo and no trash."],
+          ["Chain commands", "A pipe (|) feeds one command's output into the next, > and >> write to a file, and && runs the next command only if the first succeeded."],
+        ],
+        tryIt: 'grep -rl "password" src/ --include="*.py"' },
+    ];
+
+    const CONFLICT = [
+      ["m", "<<<<<<< HEAD"], ["a", "def greet():"], ["a", "    return \"Hello!\""], ["m", "======="],
+      ["b", "def greet():"], ["b", "    return \"Hi there!\""], ["m", ">>>>>>> feature/my-change"],
+    ];
+
+    const UNDO = [
+      ["Unstage a file, keep the edits", "git restore --staged <file>"],
+      ["Discard uncommitted changes to a file", "git restore <file>"],
+      ["Fix the last commit's message", "git commit --amend"],
+      ["Undo a commit, keep the changes staged", "git reset --soft HEAD~1"],
+      ["Find a commit you thought you lost", "git reflog"],
+    ];
+
+    const LABPARTS = [
+      { id: "p1", name: "Part 1", title: "The daily workflow", min: 30,
+        steps: [
+          ["Clone the practice repo and create your branch", "git clone <repo-url>\ncd <repo>\ngit checkout -b week1-<yourname>", ""],
+          ["Add your name to CONTRIBUTORS.md", 'echo "Your Name" >> CONTRIBUTORS.md', "This creates the file if it does not exist."],
+          ["Stage and commit with a clear message", 'git add CONTRIBUTORS.md\ngit commit -m "Add <yourname> to contributors"', ""],
+          ["Push your branch and open a pull request into main", "git push -u origin week1-<yourname>", "Then open the pull request on GitHub."],
+          ["Partner approves, then you merge it", "git checkout main\ngit pull", "Review and merge on GitHub, then update your local main."],
+        ],
+        note: "What did git log --oneline --graph look like on main before and after the merge?" },
+      { id: "p2", name: "Part 2", title: "Cause a merge conflict on purpose", min: 30,
+        steps: [
+          ["Both partners branch from the current main", "git checkout main\ngit pull\ngit checkout -b conflict-<yourname>", ""],
+          ["Both edit the same line of the same file, differently", "", "Pick one line in CONTRIBUTORS.md. Each of you changes it to say something different."],
+          ["The first person pushes and merges cleanly", 'git add .\ngit commit -m "Change the shared line"\ngit push -u origin conflict-<yourname>', "Then merge the pull request on GitHub."],
+          ["The second person tries to merge and hits a conflict", "git fetch origin\ngit merge origin/main", "Git stops and reports CONFLICT in the file."],
+          ["Resolve it", "git add CONTRIBUTORS.md\ngit commit", "Open the file, read the markers, decide what the line should say and delete the three marker lines. Then run these."],
+        ],
+        note: "Paste the exact conflict markers Git showed you, and what you changed the file to." },
+      { id: "p3", name: "Part 3", title: "Undo practice", min: 20,
+        steps: [
+          ["Unstage a file without losing your edits", "git checkout -b throwaway\necho test >> notes.txt\ngit add notes.txt\ngit restore --staged notes.txt", "Confirm with git status."],
+          ["Fix a typo in a commit message", 'git add notes.txt\ngit commit -m "Ad notes"\ngit commit --amend -m "Add notes"', "Confirm with git log --oneline."],
+          ["Undo a commit but keep the changes staged", "git reset --soft HEAD~1", "Confirm with git status: the file should be staged again."],
+        ],
+        note: "Which of these three would you reach for if you had already pushed the commit to a shared branch? Hint: does it rewrite history others may have already pulled?" },
+    ];
+    const LAB_TOTAL = LABPARTS.reduce((n, x) => n + x.steps.length, 0);
+
+    const HISTORY = [
+      ["2005", "Git is born", "Linus Torvalds starts Git in April, after the Linux kernel loses free access to its old version control tool, BitKeeper. He wants it fast, simple and distributed."],
+      ["2005", "A new maintainer", "Junio Hamano takes over maintenance in July and still leads the project. Git 1.0 follows in December."],
+      ["2008", "GitHub launches", "Hosting and pull requests make sharing code easy for everyone, not only kernel developers."],
+      ["2011", "GitLab appears", "Another host joins the scene, adding built-in pipelines and a self-hosted option."],
+      ["2014", "Git 2.0", "Git matures into the default tool for professional teams around the world."],
+      ["2020", "Default branch: main", "Git 2.28 adds init.defaultBranch, and major hosts move new repositories from master to main."],
+    ];
+
+    const FAQS = [
+      ["What is the difference between Git and GitHub?", "Git is the version control tool that runs on your computer. GitHub is a website that hosts Git repositories so teams can share and review code. GitLab and Bitbucket do the same job."],
+      ["What is a commit?", "A commit is a saved snapshot of your staged changes, with a message explaining why you made them. Write messages that a teammate can understand in six months."],
+      ["Why do I need the staging area?", "It lets you group related changes into one clean commit, even if you edited many files. Use git add -p to stage only parts of a file."],
+      ["What is a branch and when should I use one?", "A branch is an independent line of work. Create one for each feature or fix so main stays stable, then merge it when it is reviewed."],
+      ["What is the difference between git fetch and git pull?", "git fetch downloads new commits without changing your files. git pull fetches and then merges them into your current branch."],
+      ["What is a merge conflict?", "It happens when two branches change the same lines and Git cannot choose between them. Git stops, marks both versions in the file and waits for you to decide. Keep the right text, delete the markers, then add and commit."],
+      ["Why does the lab ask which undo is safe after pushing?", "Some undo commands rewrite history. If teammates already pulled the old commit, rewriting it causes trouble for them. Check which of the three commands changes existing commits."],
+      ["I made a mistake. Can I undo it?", "Usually yes. git restore discards edits, git revert makes a new commit that cancels an old one, and git reflog helps you find lost commits."],
+    ];
+
+    function Logo({ solid }) {
+      const [failed, setFailed] = useState(false);
+      return failed ? (
+        /* Fallback wordmark. Drop the official logo at assets/safaricom-logo.png to replace it. */
+        <span className={"font-extrabold tracking-tight text-xl " + (solid ? "text-emerald-700" : "text-white")}>
+          safaricom<span className="text-lime-400">.</span>
+        </span>
+      ) : (
+        <img src="assets/safaricom-logo.png" alt="Safaricom" className="h-9 w-auto" onError={() => setFailed(true)} />
+      );
+    }
+
+    function Header() {
+      const [open, setOpen] = useState(false);
+      const jump = (id) => { setOpen(false); go(id); };
+      return (
+        <header className="site-header fixed inset-x-0 top-0 z-50">
+          <div className="mx-auto flex max-w-[1400px] items-center justify-between px-6 py-3 lg:px-12">
+            <button aria-label="Back to top" onClick={() => scrollTo({ top: 0, behavior: "smooth" })} className="flex items-center gap-3 bg-transparent border-0 p-0">
+              <Logo />
+              <span className="hidden sm:block h-6 w-px bg-current opacity-30" />
+              <span className="hidden sm:block font-bold tracking-tight">Git Workflow</span>
+            </button>
+            <nav className="hidden md:flex items-center gap-9" aria-label="Main">
+              {NAV.map(([label, id]) => (
+                <button key={id} className="nav-link-x" onClick={() => jump(id)}>{label}</button>
+              ))}
+            </nav>
+            <div className="flex items-center gap-3">
+              <button onClick={() => jump("lab")} className="rounded-full bg-emerald-500 px-5 py-2 text-sm font-bold text-emerald-950 shadow-md transition hover:-translate-y-0.5 hover:bg-emerald-400">
+                Start the lab
+              </button>
+              <button className="md:hidden text-2xl bg-transparent border-0" aria-label="Menu" aria-expanded={open} onClick={() => setOpen(!open)}>{open ? "✕" : "☰"}</button>
+            </div>
+          </div>
+          {open && (
+            <nav className="md:hidden bg-white px-6 pb-4 text-emerald-950" aria-label="Mobile">
+              {NAV.map(([label, id]) => (
+                <button key={id} onClick={() => jump(id)} className="block w-full border-0 border-b border-emerald-100 bg-transparent py-3 text-left font-bold">{label}</button>
+              ))}
+            </nav>
+          )}
+        </header>
+      );
+    }
+
+    function CommitGraph() {
+      return (
+        <svg viewBox="0 0 400 110" className="w-full" aria-label="Commit graph with a feature branch">
+          <path d="M20 70 H380" stroke="#6ee7b7" strokeWidth="3" strokeLinecap="round" opacity=".5" />
+          <path d="M120 70 C150 70 150 30 180 30 H250 C280 30 280 70 310 70" fill="none" stroke="#a3e635" strokeWidth="3" strokeLinecap="round" opacity=".7" />
+          {[[40, 70], [120, 70], [310, 70], [370, 70]].map(([x, y], i) => (
+            <circle key={i} cx={x} cy={y} r="6" fill="#6ee7b7" className="node" style={{ animationDelay: i * 0.4 + "s" }} />
+          ))}
+          {[[180, 30], [250, 30]].map(([x, y], i) => (
+            <circle key={i} cx={x} cy={y} r="6" fill="#a3e635" className="node" style={{ animationDelay: 0.6 + i * 0.5 + "s" }} />
+          ))}
+          <text x="20" y="102" fill="#a7f3d0" fontSize="11">main</text>
+          <text x="190" y="18" fill="#d9f99d" fontSize="11">feature/intro</text>
+        </svg>
+      );
+    }
+
+    function Hero() {
+      useEffect(() => { GitPage.typeTerminal(document.getElementById("term"), TERMINAL); }, []);
+      return (
+        <section id="home" className="relative min-h-screen overflow-hidden bg-gradient-to-br from-emerald-950 via-green-900 to-teal-900">
+          <div className="pointer-events-none absolute inset-0">
+            <div className="anim-drift absolute left-10 top-24 h-72 w-72 rounded-full bg-emerald-400/20 blur-3xl" />
+            <div className="anim-drift-2 absolute bottom-10 left-1/3 h-96 w-96 rounded-full bg-lime-400/15 blur-3xl" />
+            <div className="anim-drift absolute right-1/4 top-1/3 h-[26rem] w-[26rem] rounded-full bg-teal-400/15 blur-3xl" />
+            <div className="absolute inset-0 opacity-[0.07]" style={{ backgroundImage: "radial-gradient(circle at 1px 1px, white 1px, transparent 0)", backgroundSize: "36px 36px" }} />
+          </div>
+
+          <div className="relative z-10 mx-auto grid max-w-[1400px] items-center gap-12 px-6 pb-24 pt-32 lg:grid-cols-[1fr_1.05fr] lg:px-12 lg:pt-40">
+            <div>
+              <span className="anim-rise mb-7 inline-flex items-center gap-2 rounded-full border border-emerald-300/30 bg-emerald-400/15 px-4 py-1.5 text-sm text-emerald-100" style={{ animationDelay: "0ms" }}>
+                <span className="relative flex h-2 w-2"><span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-300 opacity-75" /><span className="relative inline-flex h-2 w-2 rounded-full bg-emerald-300" /></span>
+                Week 1 · Git lab
+              </span>
+              <h1 className="font-display mb-6 text-5xl font-bold leading-[1.03] tracking-tight text-white sm:text-6xl xl:text-7xl">
+                <span className="anim-rise block" style={{ animationDelay: "80ms" }}>Save your work,</span>
+                <span className="anim-rise anim-gradx block bg-gradient-to-r from-emerald-300 via-lime-300 to-emerald-300 bg-clip-text text-transparent" style={{ animationDelay: "180ms" }}>share it safely.</span>
+              </h1>
+              <p className="anim-rise mb-9 max-w-lg text-lg leading-relaxed text-emerald-50/80" style={{ animationDelay: "280ms" }}>
+                Start with how programs, operating systems and networks work, then practise the Git workflow hands-on in Lab 03: branch, commit, merge, resolve a conflict and undo mistakes.
+              </p>
+              <div className="anim-rise flex flex-wrap gap-4" style={{ animationDelay: "380ms" }}>
+                <button onClick={() => go("introduction")} className="group relative h-14 overflow-hidden rounded-full bg-emerald-400 px-8 font-bold text-emerald-950 shadow-lg shadow-emerald-500/30 transition hover:-translate-y-0.5 hover:bg-emerald-300">
+                  <span className="sweep pointer-events-none absolute inset-y-0 -left-1/3 w-1/3 bg-white/40 blur-md" />
+                  <span className="relative">What is Git?</span>
+                </button>
+                <button onClick={() => go("lab")} className="h-14 rounded-full border border-white/25 bg-white/5 px-8 font-semibold text-white backdrop-blur transition hover:bg-white/15">
+                  Open the lab checklist
+                </button>
+              </div>
+              <div className="anim-rise mt-12 grid max-w-lg grid-cols-3 gap-6 border-t border-white/10 pt-8" style={{ animationDelay: "480ms" }}>
+                {[["2005", "Year created"], ["100%", "Free and open source"], ["13", "Lab steps"]].map(([v, l]) => (
+                  <div key={l}><p className="text-3xl font-bold text-white">{v}</p><p className="mt-1 text-sm text-emerald-100/60">{l}</p></div>
+                ))}
+              </div>
+            </div>
+
+            <div className="anim-rise relative" style={{ animationDelay: "300ms" }}>
+              <div className="relative overflow-hidden rounded-[2rem] p-[2px] shadow-[0_30px_90px_-20px_rgba(52,211,153,0.4)]">
+                <div className="absolute left-1/2 top-1/2 h-[220%] w-[220%] -translate-x-1/2 -translate-y-1/2"><div className="conic h-full w-full" /></div>
+                <div className="relative rounded-[calc(2rem-2px)] bg-emerald-950/95 p-6 backdrop-blur-xl">
+                  <div className="mb-4 flex items-center gap-2">
+                    <span className="h-3 w-3 rounded-full bg-rose-400" /><span className="h-3 w-3 rounded-full bg-amber-300" /><span className="h-3 w-3 rounded-full bg-emerald-400" />
+                    <span className="ml-3 text-xs text-emerald-200/60">week-1-lab — bash</span>
+                  </div>
+                  <div id="term" className="term" />
+                  <span className="caret" />
+                  <div className="mt-6 border-t border-white/10 pt-4"><CommitGraph /></div>
+                </div>
+              </div>
+              <div className="anim-float absolute -left-4 -top-5 hidden items-center gap-3 rounded-2xl bg-white/90 px-4 py-3 shadow-xl backdrop-blur sm:flex">
+                <span className="text-2xl">🌿</span>
+                <div><p className="text-sm font-bold leading-none text-emerald-950">Branch freely</p><p className="mt-1 text-xs text-slate-500">main stays safe</p></div>
+              </div>
+            </div>
+          </div>
+        </section>
+      );
+    }
+
+    function Marquee() {
+      const items = ["init", "add", "commit", "branch", "merge", "push", "pull", "clone", "status", "log", "diff", "rebase"];
+      return (
+        <div className="overflow-hidden border-y border-white/10 bg-emerald-950 py-4">
+          <div className="anim-marquee flex w-max">
+            {[...items, ...items].map((w, i) => (
+              <span key={i} className="flex items-center gap-6 pr-6 font-mono text-sm font-bold text-emerald-200">git {w}<span className="text-lime-400">●</span></span>
+            ))}
+          </div>
+        </div>
+      );
+    }
+
+    function Intro() {
+      return (
+        <section id="introduction" className="relative overflow-hidden bg-gradient-to-b from-emerald-50 via-green-100/70 to-lime-50 px-6 py-24 sm:py-28">
+          <div className="anim-drift pointer-events-none absolute -left-20 top-10 h-96 w-96 rounded-full bg-emerald-300/20 blur-3xl" />
+          <div className="relative mx-auto max-w-6xl">
+            <div className="reveal mb-14 max-w-3xl">
+              <h2 className="font-display text-4xl font-bold leading-tight tracking-tight text-emerald-950 sm:text-5xl">What is Git, and why do we use it?</h2>
+              <p className="mt-5 text-lg leading-relaxed text-slate-600">
+                Git is a version control system. It remembers every version of your project, shows who changed what and why, and lets several people work on the same code without overwriting each other. On a team, that history is how code stays safe, reviewable and recoverable.
+              </p>
+            </div>
+            <div className="row g-4">
+              {CONCEPTS.map((c, i) => (
+                <div className="col-md-4" key={c.t}>
+                  <div className="reveal lift h-100 rounded-[1.75rem] border border-emerald-100 bg-white/85 p-8" style={{ transitionDelay: i * 120 + "ms" }}>
+                    <div className="mb-5 flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-to-br from-emerald-500 to-lime-400 text-2xl shadow-lg shadow-emerald-500/20">{c.i}</div>
+                    <h3 className="mb-3 text-xl font-bold text-emerald-950">{c.t}</h3>
+                    <p className="m-0 leading-relaxed text-slate-600">{c.d}</p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </section>
+      );
+    }
+
+    function Cmd({ text }) {
+      return (
+        <pre className="m-0 overflow-x-auto rounded-xl bg-black/40 px-4 py-3 font-mono text-[13px] leading-relaxed text-emerald-300">
+          {text.split("\n").map((l, i) => <div key={i}><span className="select-none text-emerald-500">$ </span>{l}</div>)}
+        </pre>
+      );
+    }
+
+    function Foundations() {
+      const [tab, setTab] = useState(0);
+      const f = FOUND[tab];
+      return (
+        <section id="foundations" className="relative overflow-hidden bg-white px-6 py-24 sm:py-28">
+          <div className="anim-drift-2 pointer-events-none absolute -right-24 top-20 h-80 w-80 rounded-full bg-lime-300/20 blur-3xl" />
+          <div className="relative mx-auto max-w-6xl">
+            <div className="reveal mx-auto mb-10 max-w-2xl text-center">
+              <h2 className="font-display text-4xl font-bold leading-tight tracking-tight text-emerald-950 sm:text-5xl">Four things to know before you touch Git</h2>
+              <p className="mt-4 text-lg text-slate-600">Git runs on a real operating system, talks to servers over a network and lives in your terminal. Here is the short version of each.</p>
+            </div>
+            <div className="reveal mb-8 flex flex-wrap justify-center gap-2" role="tablist">
+              {FOUND.map((x, i) => (
+                <button key={x.id} role="tab" aria-selected={tab === i} onClick={() => setTab(i)}
+                  className={"rounded-full border px-5 py-2.5 text-sm font-bold transition duration-300 hover:-translate-y-0.5 " + (tab === i ? "border-transparent bg-gradient-to-r from-emerald-600 to-lime-500 text-white shadow-lg shadow-emerald-500/30" : "border-emerald-200 bg-white text-emerald-900 hover:bg-emerald-50")}>
+                  {x.icon} {x.label}
+                </button>
+              ))}
+            </div>
+            <div key={tab} className="anim-rise">
+              <p className="mx-auto mb-8 max-w-2xl text-center text-lg font-medium text-emerald-900">{f.lead}</p>
+              <div className="row g-4">
+                {f.points.map(([t, d]) => (
+                  <div className="col-md-6" key={t}>
+                    <div className="lift h-100 rounded-3xl border border-emerald-100 border-l-4 border-l-emerald-500 bg-gradient-to-br from-white to-emerald-50 p-7">
+                      <h3 className="mb-2 text-lg font-bold text-emerald-950">{t}</h3>
+                      <p className="m-0 leading-relaxed text-slate-600">{d}</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+              <div className="mt-6 rounded-3xl bg-emerald-950 p-6">
+                <p className="mb-3 text-sm font-semibold text-emerald-200">Try it (Linux, macOS or Git Bash)</p>
+                <Cmd text={f.tryIt} />
+              </div>
+            </div>
+          </div>
+        </section>
+      );
+    }
+
+    function Workflow() {
+      const [stage, setStage] = useState(0);
+      const s = STAGES[stage];
+      const tone = { m: "text-amber-300 bg-amber-400/10", a: "text-emerald-200 bg-emerald-400/10", b: "text-lime-200 bg-lime-400/10" };
+      const card = "reveal h-100 rounded-3xl border border-white/10 bg-white/5 p-6 backdrop-blur sm:p-8";
+      return (
+        <section id="workflow" className="relative overflow-hidden bg-gradient-to-br from-emerald-950 via-green-950 to-teal-950 px-6 py-24 sm:py-28">
+          <div className="anim-drift-2 pointer-events-none absolute -right-20 bottom-0 h-96 w-96 rounded-full bg-lime-400/10 blur-3xl" />
+          <div className="relative mx-auto max-w-6xl">
+            <div className="reveal mx-auto mb-14 max-w-2xl text-center">
+              <h2 className="font-display text-4xl font-bold leading-tight tracking-tight text-white sm:text-5xl">The Git workflow in four places</h2>
+              <p className="mt-4 text-lg text-emerald-100/70">A commit is a snapshot and a branch is a movable pointer. Your changes travel left to right. Select a stage to see the command that moves them.</p>
+            </div>
+            <div className="reveal grid gap-3 md:grid-cols-4">
+              {STAGES.map((x, i) => (
+                <button key={x.n} onClick={() => setStage(i)} aria-pressed={stage === i}
+                  className={"rounded-2xl border p-5 text-left transition duration-300 hover:-translate-y-1 " + (stage === i ? "border-transparent bg-gradient-to-br from-emerald-400 to-lime-300 text-emerald-950 shadow-lg shadow-emerald-400/30" : "border-white/10 bg-white/5 text-emerald-100 hover:border-emerald-300/50")}>
+                  <p className="mb-1 text-xs font-semibold opacity-70">Step {i + 1}</p>
+                  <p className="m-0 font-bold">{x.n}</p>
+                </button>
+              ))}
+            </div>
+            <div key={stage} className="anim-rise mt-4 rounded-2xl border border-emerald-300/20 bg-white/5 p-6 backdrop-blur">
+              <code className="inline-block rounded-lg bg-black/40 px-3 py-1.5 font-mono text-emerald-300">$ {s.c}</code>
+              <p className="mb-0 mt-3 text-emerald-50/80">{s.d}</p>
+            </div>
+
+            <div className="mt-14">
+              <div className="row g-4">
+                <div className="col-lg-5">
+                  <div className={card}>
+                    <h3 className="mb-1 text-xl font-bold text-white">Set up once per machine</h3>
+                    <p className="mb-3 text-sm text-emerald-100/70">Git stamps your name and email on every commit.</p>
+                    <Cmd text={'git config --global user.name "Your Name"\ngit config --global user.email "you@example.com"\ngit config --global init.defaultBranch main'} />
+                    <h3 className="mb-1 mt-6 text-xl font-bold text-white">Keep files out with .gitignore</h3>
+                    <p className="mb-3 text-sm text-emerald-100/70">List what Git must never track, such as dependencies, secrets and logs.</p>
+                    <Cmd text={"node_modules/\n.env\n*.log\n__pycache__/"} />
+                    <p className="mb-0 mt-3 rounded-xl bg-amber-300/10 p-3 text-sm text-amber-200">If a secret is ever committed, rotate it. Deleting the file in a later commit does not remove it from history.</p>
+                  </div>
+                </div>
+                <div className="col-lg-7">
+                  <div className={card}>
+                    <h3 className="mb-1 text-xl font-bold text-white">Anatomy of a merge conflict</h3>
+                    <p className="mb-4 text-sm text-emerald-100/70">Git cannot choose between two edits to the same lines, so it asks you.</p>
+                    <pre className="m-0 overflow-x-auto rounded-xl bg-black/40 py-3 font-mono text-[13px]">
+                      {CONFLICT.map(([k, line], i) => <div key={i} className={"px-4 " + tone[k]}>{line}</div>)}
+                    </pre>
+                    <ul className="mb-0 mt-4 list-none space-y-2 p-0 text-sm text-emerald-50/85">
+                      <li><span className="font-bold text-emerald-200">Green:</span> what is on your branch (HEAD).</li>
+                      <li><span className="font-bold text-lime-200">Lime:</span> the incoming change.</li>
+                      <li><span className="font-bold text-amber-300">Amber:</span> the markers. Keep the right text, delete all three marker lines, then run git add and git commit.</li>
+                    </ul>
+                  </div>
+                </div>
+                <div className="col-lg-6">
+                  <div className={card}>
+                    <h3 className="mb-4 text-xl font-bold text-white">Merge or rebase?</h3>
+                    <div className="mb-3 rounded-2xl bg-emerald-400/10 p-4">
+                      <p className="mb-1 font-bold text-emerald-200">git merge</p>
+                      <p className="m-0 text-sm text-emerald-50/80">Keeps exactly what happened, including a merge commit, and never rewrites existing commits. The default for most teams.</p>
+                    </div>
+                    <div className="rounded-2xl bg-amber-300/10 p-4">
+                      <p className="mb-1 font-bold text-amber-200">git rebase</p>
+                      <p className="m-0 text-sm text-emerald-50/80">Replays your commits on top of the latest main so history looks linear. It rewrites commit hashes, so never rebase commits that are pushed and shared.</p>
+                    </div>
+                  </div>
+                </div>
+                <div className="col-lg-6">
+                  <div className={card}>
+                    <h3 className="mb-2 text-xl font-bold text-white">Undoing things</h3>
+                    {UNDO.map(([sit, cmd]) => (
+                      <div key={sit} className="border-b border-white/10 py-3 last:border-0">
+                        <p className="mb-1.5 text-sm text-emerald-50/80">{sit}</p>
+                        <Cmd text={cmd} />
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+      );
+    }
+
+    function Lab() {
+      const [part, setPart] = useState(0);
+      const [done, setDone] = useState(new Set());
+      const toggle = (k) => setDone((p) => { const n = new Set(p); n.has(k) ? n.delete(k) : n.add(k); return n; });
+      const pct = Math.round((done.size / LAB_TOTAL) * 100);
+      const p = LABPARTS[part];
+      const count = (id) => [...done].filter((k) => k.startsWith(id + "-")).length;
+      return (
+        <section id="lab" className="relative overflow-hidden bg-gradient-to-br from-green-800 via-emerald-700 to-teal-700 px-6 py-24 sm:py-28">
+          <div className="anim-drift pointer-events-none absolute -left-24 top-10 h-96 w-96 rounded-full bg-lime-300/20 blur-3xl" />
+          <div className="relative mx-auto max-w-4xl">
+            <div className="reveal mb-10 text-center">
+              <h2 className="font-display text-4xl font-bold leading-tight tracking-tight text-white sm:text-5xl">Lab 03: your hands-on checklist</h2>
+              <p className="mx-auto mt-4 max-w-xl text-lg text-emerald-50/85">Work in pairs. Each of you needs your own clone of the same practice repository.</p>
+              <div className="mx-auto mt-6 max-w-sm">
+                <div className="mb-1.5 flex justify-between text-xs font-bold text-emerald-50"><span>{done.size} of {LAB_TOTAL} steps done</span><span>{pct}%</span></div>
+                <div className="h-2 overflow-hidden rounded-full bg-black/25"><div className="h-full rounded-full bg-gradient-to-r from-lime-300 to-emerald-200 transition-all duration-700" style={{ width: pct + "%" }} /></div>
+              </div>
+            </div>
+
+            <div className="reveal mb-6 grid gap-3 md:grid-cols-3" role="tablist">
+              {LABPARTS.map((x, i) => (
+                <button key={x.id} role="tab" aria-selected={part === i} onClick={() => setPart(i)}
+                  className={"rounded-2xl border p-4 text-left transition duration-300 hover:-translate-y-1 " + (part === i ? "border-transparent bg-white text-emerald-950 shadow-xl" : "border-white/20 bg-black/15 text-white hover:border-white/50")}>
+                  <p className="mb-1 text-xs font-semibold opacity-70">{x.name} · {x.min} min · {count(x.id)}/{x.steps.length}</p>
+                  <p className="m-0 font-bold">{x.title}</p>
+                </button>
+              ))}
+            </div>
+
+            <div key={part} className="anim-rise space-y-3">
+              {p.steps.map(([title, cmd, hint], i) => {
+                const k = p.id + "-" + i;
+                const on = done.has(k);
+                return (
+                  <label key={k} className={"flex cursor-pointer items-start gap-4 rounded-2xl border p-4 transition duration-300 hover:-translate-y-0.5 " + (on ? "border-lime-300/60 bg-lime-300/15" : "border-white/15 bg-black/15 hover:border-lime-200/60")}>
+                    <input type="checkbox" checked={on} onChange={() => toggle(k)} className="mt-1 h-5 w-5 shrink-0 accent-lime-300" />
+                    <span className="min-w-0 flex-1">
+                      <span className={"block font-bold " + (on ? "text-lime-200 line-through decoration-2" : "text-white")}>{title}</span>
+                      {hint && <span className="mt-1 block text-sm text-emerald-50/80">{hint}</span>}
+                      {cmd && <span className="mt-2 block" onClick={(e) => e.preventDefault()}><Cmd text={cmd} /></span>}
+                    </span>
+                  </label>
+                );
+              })}
+              <div className="rounded-2xl border border-lime-300/40 bg-lime-300/10 p-5">
+                <p className="mb-1 font-bold text-lime-200">📝 Answer in your lab notes</p>
+                <p className="m-0 text-emerald-50">{p.note}</p>
+              </div>
+            </div>
+
+            <div className="reveal mt-8 grid gap-4 md:grid-cols-2">
+              <div className="lift rounded-3xl border border-white/20 bg-white/10 p-6 backdrop-blur">
+                <p className="mb-1 font-bold text-white">Stretch goal: rebase</p>
+                <p className="mb-3 text-sm text-emerald-50/85">Rebase a feature branch onto an updated main, then compare git log --oneline --graph before and after with a regular merge.</p>
+                <Cmd text={"git checkout feature\ngit rebase main"} />
+              </div>
+              <div className="lift rounded-3xl border border-white/20 bg-white/10 p-6 backdrop-blur">
+                <p className="mb-1 font-bold text-white">Submit</p>
+                <p className="m-0 text-sm text-emerald-50/85">Post a screenshot or paste of your resolved conflict, plus your answers, in the team channel.</p>
+              </div>
+            </div>
+            {pct === 100 && <p className="anim-rise mb-0 mt-8 text-center text-lg font-bold text-lime-200">All 13 steps done. Write up your notes and submit. 🎉</p>}
+          </div>
+        </section>
+      );
+    }
+
+    function History() {
+      return (
+        <section id="history" className="relative overflow-hidden bg-gradient-to-b from-lime-50 via-emerald-50 to-green-100/70 px-6 py-24 sm:py-28">
+          <div className="relative mx-auto max-w-4xl">
+            <div className="reveal mb-14 text-center">
+              <h2 className="font-display text-4xl font-bold leading-tight tracking-tight text-emerald-950 sm:text-5xl">A short history of Git</h2>
+              <p className="mx-auto mt-4 max-w-xl text-lg text-slate-600">One tool, built in weeks, now used by almost every software team.</p>
+            </div>
+            <ol className="relative m-0 list-none space-y-8 p-0 pl-8 before:absolute before:bottom-2 before:left-[11px] before:top-2 before:w-0.5 before:bg-gradient-to-b before:from-emerald-500 before:to-lime-300 before:content-['']">
+              {HISTORY.map(([year, title, text], i) => (
+                <li key={title} className="reveal relative" style={{ transitionDelay: i * 80 + "ms" }}>
+                  <span className="node absolute -left-8 top-6 h-6 w-6 rounded-full border-4 border-white bg-emerald-500 shadow" style={{ animation: "none" }} />
+                  <div className="lift rounded-3xl border border-emerald-100 bg-white p-6 sm:p-8">
+                    <span className="rounded-full bg-emerald-100 px-3 py-1 text-sm font-bold text-emerald-800">{year}</span>
+                    <h3 className="mb-2 mt-3 text-xl font-bold text-emerald-950">{title}</h3>
+                    <p className="m-0 leading-relaxed text-slate-600">{text}</p>
+                  </div>
+                </li>
+              ))}
+            </ol>
+          </div>
+        </section>
+      );
+    }
+
+    function Faqs() {
+      return (
+        <section id="faqs" className="relative overflow-hidden bg-white px-6 py-24 sm:py-28">
+          <div className="anim-drift pointer-events-none absolute -left-20 top-16 h-72 w-72 rounded-full bg-emerald-300/20 blur-3xl" />
+          <div className="relative mx-auto max-w-3xl">
+            <div className="reveal mb-10 text-center">
+              <h2 className="font-display text-4xl font-bold tracking-tight text-emerald-950 sm:text-5xl">Questions, answered.</h2>
+              <p className="mt-4 text-lg text-slate-600">The things most people ask in their first week with Git.</p>
+            </div>
+            <div className="reveal accordion" id="faqAcc">
+              {FAQS.map(([q, a], i) => (
+                <div className="accordion-item" key={q}>
+                  <h3 className="accordion-header m-0">
+                    <button className={"accordion-button" + (i ? " collapsed" : "")} type="button" data-bs-toggle="collapse" data-bs-target={"#faq" + i} aria-expanded={i === 0}>{q}</button>
+                  </h3>
+                  <div id={"faq" + i} className={"accordion-collapse collapse" + (i ? "" : " show")} data-bs-parent="#faqAcc">
+                    <div className="accordion-body text-slate-600">{a}</div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </section>
+      );
+    }
+
+    function Footer() {
+      return (
+        <footer className="border-t border-emerald-900 bg-emerald-950 text-emerald-100/80">
+          <div className="mx-auto grid max-w-6xl gap-10 px-6 py-14 md:grid-cols-[1.5fr_1fr_1fr]">
+            <div>
+              <Logo />
+              <p className="mt-4 max-w-xs text-sm leading-relaxed text-emerald-100/60">Week 1 Git lab. Learn the workflow once, then use it on every project.</p>
+            </div>
+            <nav aria-label="Sections">
+              <p className="mb-3 font-bold text-white">Explore</p>
+              <ul className="m-0 list-none space-y-2 p-0 text-sm">
+                {NAV.map(([l, id]) => <li key={id}><button onClick={() => go(id)} className="border-0 bg-transparent p-0 text-emerald-100/70 transition hover:text-white">{l}</button></li>)}
+              </ul>
+            </nav>
+            <div>
+              <p className="mb-3 font-bold text-white">Handy links</p>
+              <ul className="m-0 list-none space-y-2 p-0 text-sm">
+                {[["Pro Git book", "https://git-scm.com/book"], ["Git documentation", "https://git-scm.com/doc"], ["GitHub Docs", "https://docs.github.com"]].map(([l, h]) => (
+                  <li key={l}><a href={h} target="_blank" rel="noreferrer" className="text-emerald-100/70 no-underline transition hover:text-white">{l}</a></li>
+                ))}
+              </ul>
+            </div>
+          </div>
+          <div className="mx-auto flex max-w-6xl items-center justify-between border-t border-white/10 px-6 py-5 text-sm text-emerald-100/50">
+            <p className="m-0">© {new Date().getFullYear()} Git Workflow · Week 1 lab</p>
+            <button aria-label="Back to top" onClick={() => scrollTo({ top: 0, behavior: "smooth" })} className="h-9 w-9 rounded-full border border-white/15 bg-transparent text-emerald-100 transition hover:bg-white hover:text-emerald-950">↑</button>
+          </div>
+        </footer>
+      );
+    }
+
+    function App() {
+      useEffect(() => { GitPage.initReveal(); }, []);
+      return (<><Header /><Hero /><Marquee /><Intro /><Foundations /><Workflow /><Lab /><History /><Faqs /><Footer /></>);
+    }
+
+    ReactDOM.createRoot(document.getElementById("root")).render(<App />);
+  </script>
+</body>
+</html>
